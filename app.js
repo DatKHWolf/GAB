@@ -1,11 +1,12 @@
 const express = require('express')
 const bodyParser = require('body-parser')
-const {graphqlHTTP}=require('express-graphql')
+const { graphqlHTTP }=require('express-graphql')
 const { buildSchema }=require('graphql')
 const mongoose = require('mongoose')
+const Event = require('./models/event')
 
 const app = express()
-const events = []
+
 
 app.use(bodyParser.json())
 app.use('/graphql', graphqlHTTP({
@@ -34,29 +35,37 @@ app.use('/graphql', graphqlHTTP({
             query: RootQuery
             mutation: RootMutation
         }
-    `),
+    `),      
     rootValue:{
         events: () => {
             return events
         },
-        createEvent: (args) =>{
-            const event = {
+          createEvent:  (args) =>{
+            const event = new Event({
                 _id:Math.random(),
                 title:args.EventInput.title,
                 description:args.EventInput.description,
                 price:+args.EventInput.price,
-                date:new Date().toISOString()
-            }
-            console.log(event)
-            events.push(event)
-            return event
-        }
+                date:new Date(args.EventInput.date)
+            })
+            return event.save().then(result=>{
+                console.log(event)
+                return {...result._doc}
+            })
+            .catch(err=>{
+                console.log(err)
+                throw err
+            })
     },
     graphiql:true
-}))
+}}))
 
-mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.l1nzbvq.mongodb.net/?retryWrites=true&w=majority`)
-.then(()=>{app.listen(1337)}).catch(err=>{
+mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.l1nzbvq.mongodb.net/${process.env.MONGO_DB}?retryWrites=true&w=majority`)
+.then(
+    ()=>{app.listen(4000)
+        console.log('Hier gehts rein aber die API wird nicht angezeigt')
+    })
+.catch(err=>{
     console.log(err)
 })
 
